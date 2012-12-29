@@ -1,8 +1,9 @@
-function TodoCtrl($scope) {
-  $scope.todos = [
-    {text:'learn angular', done:true},
-    {text:'build an angular app', done:false}];
- 
+'use strict';
+
+function TodoCtrl($scope, Todo) {
+
+  $scope.todos = Todo.query();
+
   $scope.addTodo = function() {
     $scope.todos.push({text:$scope.todoText, done:false});
     $scope.todoText = '';
@@ -24,3 +25,11 @@ function TodoCtrl($scope) {
     });
   };
 }
+
+angular.module('todoApp', ['todoServices']).
+  config(['$routeProvider', function($routeProvider) {
+/*  $routeProvider.
+/*      when('/phones', {templateUrl: 'partials/phone-list.html',   controller: PhoneListCtrl}).
+      when('/phones/:phoneId', {templateUrl: 'partials/phone-detail.html', controller: PhoneDetailCtrl}).      otherwise({redirectTo: '/phones'});*/
+
+}]);

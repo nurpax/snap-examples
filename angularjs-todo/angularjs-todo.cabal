@@ -16,7 +16,7 @@ Flag development
 
 Executable angularjs-todo
   hs-source-dirs: src
-  main-is: Main.hs
+  main-is:        Main.hs
 
   Build-depends:
     base >= 4 && < 5,

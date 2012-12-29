@@ -1,12 +1,14 @@
 <!doctype html>
-<html ng-app>
+<html ng-app="todoApp">
   <head>
     <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.0.3/angular.min.js"></script>
     <script src="todo.js"></script>
+    <script src="services.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.0.3/angular-resource.min.js"></script>
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <h2>Todo</h2>
+    <h2>Snap + Angular Todo</h2>
     <div ng-controller="TodoCtrl">
       <span>{{remaining()}} of {{todos.length}} remaining</span>
       [ <a href="" ng-click="archive()">archive</a> ]

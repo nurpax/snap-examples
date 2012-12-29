@@ -98,21 +98,20 @@ handleCommentSubmit = method POST (withLoggedInUser go)
       maybeWhen c (withTop db . Db.saveComment user . T.decodeUtf8)
       redirect "/"
 
-renderComment :: Monad m => Db.Comment -> I.Splice m
-renderComment (Db.Comment _ saved text) =
-  I.runChildrenWithText [ ("savedOn", T.pack . show $ saved)
-                        , ("comment", text)]
+handleTodos :: H ()
+handleTodos = method GET (withLoggedInUser go)
+  where
+    go user = do
+      modifyResponse $ setContentType "application/json"
+      writeText "[ { \"id\":1, \"text\":\"haloo\", \"done\":\"false\" } ]"
 
 -- | Render main page
 mainPage :: H ()
 mainPage = withLoggedInUser go
   where
     go :: Db.User -> H ()
-    go user = do
-      comments <- withTop db $ Db.listComments user
-      heistLocal (splices comments) $ render "/index"
-    splices cs =
-      I.bindSplices [("comments", I.mapSplices renderComment cs)]
+    go _user = do
+      serveDirectory "static"
 
 -- | The application's routes.
 routes :: [(ByteString, Handler App App ())]
@@ -120,6 +119,7 @@ routes = [ ("/login",        with auth handleLoginSubmit)
          , ("/logout",       with auth handleLogout)
          , ("/new_user",     with auth handleNewUser)
          , ("/save_comment", with auth handleCommentSubmit)
+         , ("/api/todo",     with auth handleTodos)
          , ("/",             with auth mainPage)
          , ("/static",       serveDirectory "static")
          ]
