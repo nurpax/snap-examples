@@ -1,0 +1,30 @@
+<html>
+
+<head>
+<script type="text/javascript" ng:autobind src="http://code.angularjs.org/0.9.18/angular-0.9.18.js"></script>
+</head>
+
+<style>
+.done_false {text-decoration: none; color: red;}
+.done_true {text-decoration: line-through; color: gray;}​
+</style>
+
+
+<body>
+<div ng:controller="TodoCtrl">
+    <input type="text" name="todoText" size="35"
+    placeholder="enter your todo here"/>
+    <button ng:click="addTodo()">add</button> <br/>
+    <label>{{remaining}} remaining</label>
+    <button ng:click="removeDone()">remove done</button><br/>
+    <ul ng:repeat="todo in todos">
+        <li>
+            <input type="checkbox" name="todo.done" ng:click="recalc()">
+            <!-- updates the css class to done_true or done_false -->
+            <span ng:class="'done_' + todo.done">{{todo.text}}</span><br/>
+        </li>
+    </ul>
+</div>​
+
+</body>
+</html>
