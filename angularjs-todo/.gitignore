@@ -1,0 +1,7 @@
+cabal-dev/
+dist/
+site_key.txt
+test.db
+log/*.log
+snaplets/sqlite-auth/
+snaplets/sqlite-simple/
