@@ -10,15 +10,15 @@ module Site
 
 ------------------------------------------------------------------------------
 import           Control.Applicative
+import           Control.Concurrent
 import           Control.Monad.Trans (liftIO, lift)
 import           Control.Monad.Trans.Either
 import           Control.Error.Safe (tryJust)
-import           Control.Lens
+import           Control.Lens ((^#))
 import           Data.ByteString (ByteString)
 import           Data.Maybe
 import           Data.Pool (withResource)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Data.Text.Read as T
 import           Snap.Core
 import           Snap.Snaplet
@@ -28,6 +28,7 @@ import           Snap.Snaplet.Heist
 import           Snap.Snaplet.Session.Backends.CookieSession
 import           Snap.Snaplet.SqliteSimple
 import           Snap.Util.FileServe
+import           Snap.Extras.JSON
 import           Heist()
 import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
@@ -90,20 +91,20 @@ withLoggedInUser action =
       uid' <- hoistEither (reader T.decimal (unUid uid))
       return $ action (Db.User uid' (userLogin u))
 
-handleCommentSubmit :: H ()
-handleCommentSubmit = method POST (withLoggedInUser go)
-  where
-    go user = do
-      c <- getParam "comment"
-      maybeWhen c (withTop db . Db.saveComment user . T.decodeUtf8)
-      redirect "/"
-
 handleTodos :: H ()
-handleTodos = method GET (withLoggedInUser go)
+handleTodos =
+  method GET  (withLoggedInUser getTodos) <|>
+  method POST (withLoggedInUser saveTodo)
   where
-    go user = do
+    getTodos user = do
+      todos <- withTop db . Db.listTodos $ user
+      writeJSON todos
+
+    saveTodo user = do
       modifyResponse $ setContentType "application/json"
-      writeText "[ { \"id\":1, \"text\":\"haloo\", \"done\":\"false\" } ]"
+      newTodo <- getJSON
+      -- TODO error code
+      either (const $ return ()) (withTop db . Db.saveTodo user) newTodo
 
 -- | Render main page
 mainPage :: H ()
@@ -118,7 +119,6 @@ routes :: [(ByteString, Handler App App ())]
 routes = [ ("/login",        with auth handleLoginSubmit)
          , ("/logout",       with auth handleLogout)
          , ("/new_user",     with auth handleNewUser)
-         , ("/save_comment", with auth handleCommentSubmit)
          , ("/api/todo",     with auth handleTodos)
          , ("/",             with auth mainPage)
          , ("/static",       serveDirectory "static")
@@ -142,7 +142,7 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     -- Grab the DB connection pool from the sqlite snaplet and call
     -- into the Model to create all the DB tables if necessary.
     let connPool = sqlitePool $ d ^# snapletValue
-    liftIO $ withResource connPool $ \conn -> Db.createTables conn
+    liftIO $ withMVar connPool $ \conn -> Db.createTables conn
 
     addAuthSplices auth
     return $ App h s d a

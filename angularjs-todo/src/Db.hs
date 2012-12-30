@@ -2,15 +2,16 @@
 
 module Db (
     User(..)
-  , Comment(..)
+  , Todo(..)
   , createTables
-  , saveComment
-  , listComments) where
+  , saveTodo
+  , listTodos) where
 
 import           Control.Applicative
 import           Control.Monad
+import           Data.Aeson
+import           Data.Maybe
 import qualified Data.Text as T
-import           Data.Time (UTCTime)
 import qualified Database.SQLite.Simple as S
 import           Snap.Snaplet
 import           Snap.Snaplet.SqliteSimple
@@ -19,15 +20,29 @@ import           Application
 
 data User = User Int T.Text
 
-data Comment = Comment
-  {
-    commentId :: Int
-  , commentSavedOn :: UTCTime
-  , commentText :: T.Text
+data Todo =
+  Todo
+  { todoId :: Maybe Int
+  , todoText :: T.Text
+  , todoDone :: Bool
   } deriving (Show)
 
-instance FromRow Comment where
-  fromRow = Comment <$> field <*> field <*> field
+instance FromJSON Todo where
+  parseJSON (Object v) =
+    Todo <$> optional (v .: "id")
+         <*> v .: "text"
+         <*> v .: "done"
+  parseJSON _ = mzero
+
+instance ToJSON Todo where
+  toJSON (Todo i text done) =
+    object [ "id" .= fromJust i
+           , "text" .= text
+           , "done" .= done
+           ]
+
+instance FromRow Todo where
+  fromRow = Todo <$> field <*> field <*> field
 
 tableExists :: S.Connection -> String -> IO Bool
 tableExists conn tblName = do
@@ -42,22 +57,31 @@ createTables conn = do
   -- Note: for a bigger app, you probably want to create a 'version'
   -- table too and use it to keep track of schema version and
   -- implement your schema upgrade procedure here.
-  schemaCreated <- tableExists conn "comments"
+  schemaCreated <- tableExists conn "todos"
   unless schemaCreated $
     S.execute_ conn
       (S.Query $
-       T.concat [ "CREATE TABLE comments ("
+       T.concat [ "CREATE TABLE todos ("
                 , "id INTEGER PRIMARY KEY, "
                 , "user_id INTEGER NOT NULL, "
                 , "saved_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, "
-                , "comment TEXT)"])
+                , "text TEXT, "
+                , "done BOOLEAN)"])
 
 -- | Retrieve a user's list of comments
-listComments :: User -> Handler App Sqlite [Comment]
-listComments (User uid _) =
-  query "SELECT id,saved_on,comment FROM comments WHERE user_id = ?" (Only uid)
+listTodos :: User -> Handler App Sqlite [Todo]
+listTodos (User uid _) =
+  query "SELECT id,text,done FROM todos WHERE user_id = ?" (Only uid)
 
--- | Save a new comment for a user
-saveComment :: User -> T.Text -> Handler App Sqlite ()
-saveComment (User uid _) c =
-  execute "INSERT INTO comments (user_id,comment) VALUES (?,?)" (uid, c)
+-- | Save or update a todo
+saveTodo :: User -> Todo -> Handler App Sqlite ()
+saveTodo (User uid _) t =
+  maybe newTodo updateTodo (todoId t)
+  where
+    newTodo =
+      execute "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
+        (uid, todoText t, todoDone t)
+
+    updateTodo tid =
+      execute "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
+        (todoText t, todoDone t, uid, tid)
