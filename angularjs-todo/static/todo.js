@@ -12,6 +12,11 @@ function TodoCtrl($scope, Todo) {
       $scope.todoText = '';
   };
  
+    // Persist immediate as clicked on
+    $scope.checkTodo = function (todo) {
+        todo.$save();
+    };
+
     $scope.remaining = function() {
         var count = 0;
         angular.forEach($scope.todos, function(todo) {
