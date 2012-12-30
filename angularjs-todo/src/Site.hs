@@ -10,7 +10,6 @@ module Site
 
 ------------------------------------------------------------------------------
 import           Control.Applicative
-import           Control.Concurrent
 import           Control.Monad.Trans (liftIO, lift)
 import           Control.Monad.Trans.Either
 import           Control.Error.Safe (tryJust)
@@ -37,10 +36,6 @@ import qualified Db
 import           Util
 
 type H = Handler App (AuthManager App)
-
-maybeWhen :: Monad m => Maybe a -> (a -> m ()) -> m ()
-maybeWhen Nothing _  = return ()
-maybeWhen (Just a) f = f a
 
 -- | Render login form
 handleLogin :: Maybe T.Text -> H ()
@@ -103,8 +98,11 @@ handleTodos =
     saveTodo user = do
       modifyResponse $ setContentType "application/json"
       newTodo <- getJSON
-      -- TODO error code
-      either (const $ return ()) (withTop db . Db.saveTodo user) newTodo
+      either (const $ return ()) persist newTodo
+        where
+          persist todo = do
+            savedTodo <- withTop db . withSqlite $ \conn -> Db.saveTodo conn user todo
+            writeJSON savedTodo
 
 -- | Render main page
 mainPage :: H ()
@@ -142,7 +140,7 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     -- Grab the DB connection pool from the sqlite snaplet and call
     -- into the Model to create all the DB tables if necessary.
     let connPool = sqlitePool $ d ^# snapletValue
-    liftIO $ withMVar connPool $ \conn -> Db.createTables conn
+    liftIO $ withResource connPool $ \conn -> Db.createTables conn
 
     addAuthSplices auth
     return $ App h s d a

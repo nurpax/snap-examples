@@ -74,14 +74,17 @@ listTodos (User uid _) =
   query "SELECT id,text,done FROM todos WHERE user_id = ?" (Only uid)
 
 -- | Save or update a todo
-saveTodo :: User -> Todo -> Handler App Sqlite ()
-saveTodo (User uid _) t =
+saveTodo :: S.Connection -> User -> Todo -> IO Todo
+saveTodo conn  (User uid _) t =
   maybe newTodo updateTodo (todoId t)
   where
-    newTodo =
-      execute "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
+    newTodo = do
+      S.execute conn "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
         (uid, todoText t, todoDone t)
+      [Only insertId] <- S.query_ conn "SELECT last_insert_rowid()" :: IO [Only Int]
+      return $ t { todoId = Just insertId }
 
-    updateTodo tid =
-      execute "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
+    updateTodo tid = do
+      S.execute conn "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
         (todoText t, todoDone t, uid, tid)
+      return t
