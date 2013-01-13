@@ -96,7 +96,6 @@ handleTodos =
       writeJSON todos
 
     saveTodo user = do
-      modifyResponse $ setContentType "application/json"
       newTodo <- getJSON
       either (const $ return ()) persist newTodo
         where
