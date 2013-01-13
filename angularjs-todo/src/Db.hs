@@ -10,6 +10,7 @@ module Db (
 import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson
+import           Data.Int (Int64)
 import           Data.Maybe
 import qualified Data.Text as T
 import qualified Database.SQLite.Simple as S
@@ -22,7 +23,7 @@ data User = User Int T.Text
 
 data Todo =
   Todo
-  { todoId :: Maybe Int
+  { todoId :: Maybe Int64
   , todoText :: T.Text
   , todoDone :: Bool
   } deriving (Show)
@@ -81,8 +82,8 @@ saveTodo conn  (User uid _) t =
     newTodo = do
       S.execute conn "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
         (uid, todoText t, todoDone t)
-      [Only insertId] <- S.query_ conn "SELECT last_insert_rowid()" :: IO [Only Int]
-      return $ t { todoId = Just insertId }
+      rowId <- S.lastInsertRowId conn
+      return $ t { todoId = Just rowId }
 
     updateTodo tid = do
       S.execute conn "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
