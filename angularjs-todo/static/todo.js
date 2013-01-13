@@ -2,16 +2,16 @@
 
 function TodoCtrl($scope, Todo) {
 
-  $scope.todos = Todo.query();
+    $scope.todos = Todo.query();
 
-  $scope.addTodo = function() {
-      var newTodo = { text:$scope.todoText, done:false };
-      Todo.save(newTodo, function (todo) {
-          $scope.todos.push(todo);
-      });
-      $scope.todoText = '';
-  };
- 
+    $scope.addTodo = function() {
+        var newTodo = { text:$scope.todoText, done:false };
+        Todo.save(newTodo, function (todo) {
+            $scope.todos.push(todo);
+        });
+        $scope.todoText = '';
+    };
+
     // Persist immediate as clicked on
     $scope.checkTodo = function (todo) {
         todo.$save();
@@ -36,5 +36,5 @@ function TodoCtrl($scope, Todo) {
 }
 
 angular.module('todoApp', ['todoServices']).
-  config(['$routeProvider', function($routeProvider) {
-}]);
+    config(['$routeProvider', function($routeProvider) {
+    }]);
