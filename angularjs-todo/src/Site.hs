@@ -111,11 +111,7 @@ handleTodos =
 
 -- | Render main page
 mainPage :: H ()
-mainPage = withLoggedInUser go
-  where
-    go :: Db.User -> H ()
-    go _user = do
-      serveDirectory "static"
+mainPage = withLoggedInUser (const $ serveDirectory "static")
 
 -- | The application's routes.
 routes :: [(ByteString, Handler App App ())]
