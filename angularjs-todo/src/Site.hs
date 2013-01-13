@@ -19,6 +19,7 @@ import           Data.ByteString (ByteString)
 import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
+import           Database.SQLite.Simple as S
 import           Snap.Core
 import           Snap.Snaplet
 import           Snap.Snaplet.Auth
@@ -86,13 +87,18 @@ withLoggedInUser action =
       uid' <- hoistEither (reader T.decimal (unUid uid))
       return $ action (Db.User uid' (userLogin u))
 
+-- | Run an IO action with an SQLite connection
+withDb :: (S.Connection -> IO a) -> H a
+withDb action =
+  withTop db . withSqlite $ \conn -> action conn
+
 handleTodos :: H ()
 handleTodos =
   method GET  (withLoggedInUser getTodos) <|>
   method POST (withLoggedInUser saveTodo)
   where
     getTodos user = do
-      todos <- withTop db . Db.listTodos $ user
+      todos <- withDb $ \conn -> Db.listTodos conn user
       writeJSON todos
 
     saveTodo user = do
@@ -100,7 +106,7 @@ handleTodos =
       either (const $ return ()) persist newTodo
         where
           persist todo = do
-            savedTodo <- withTop db . withSqlite $ \conn -> Db.saveTodo conn user todo
+            savedTodo <- withDb $ \conn -> Db.saveTodo conn user todo
             writeJSON savedTodo
 
 -- | Render main page

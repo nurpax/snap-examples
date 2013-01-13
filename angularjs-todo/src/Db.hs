@@ -13,11 +13,7 @@ import           Data.Aeson
 import           Data.Int (Int64)
 import           Data.Maybe
 import qualified Data.Text as T
-import qualified Database.SQLite.Simple as S
-import           Snap.Snaplet
-import           Snap.Snaplet.SqliteSimple
-------------------------------------------------------------------------------
-import           Application
+import           Database.SQLite.Simple
 
 data User = User Int T.Text
 
@@ -45,23 +41,23 @@ instance ToJSON Todo where
 instance FromRow Todo where
   fromRow = Todo <$> field <*> field <*> field
 
-tableExists :: S.Connection -> String -> IO Bool
+tableExists :: Connection -> String -> IO Bool
 tableExists conn tblName = do
-  r <- S.query conn "SELECT name FROM sqlite_master WHERE type='table' AND name=?" (Only tblName)
+  r <- query conn "SELECT name FROM sqlite_master WHERE type='table' AND name=?" (Only tblName)
   case r of
     [Only (_ :: String)] -> return True
     _ -> return False
 
 -- | Create the necessary database tables, if not already initialized.
-createTables :: S.Connection -> IO ()
+createTables :: Connection -> IO ()
 createTables conn = do
   -- Note: for a bigger app, you probably want to create a 'version'
   -- table too and use it to keep track of schema version and
   -- implement your schema upgrade procedure here.
   schemaCreated <- tableExists conn "todos"
   unless schemaCreated $
-    S.execute_ conn
-      (S.Query $
+    execute_ conn
+      (Query $
        T.concat [ "CREATE TABLE todos ("
                 , "id INTEGER PRIMARY KEY, "
                 , "user_id INTEGER NOT NULL, "
@@ -70,22 +66,22 @@ createTables conn = do
                 , "done BOOLEAN)"])
 
 -- | Retrieve a user's list of comments
-listTodos :: User -> Handler App Sqlite [Todo]
-listTodos (User uid _) =
-  query "SELECT id,text,done FROM todos WHERE user_id = ?" (Only uid)
+listTodos :: Connection -> User -> IO [Todo]
+listTodos conn (User uid _) =
+  query conn "SELECT id,text,done FROM todos WHERE user_id = ?" (Only uid)
 
 -- | Save or update a todo
-saveTodo :: S.Connection -> User -> Todo -> IO Todo
-saveTodo conn  (User uid _) t =
+saveTodo :: Connection -> User -> Todo -> IO Todo
+saveTodo conn (User uid _) t =
   maybe newTodo updateTodo (todoId t)
   where
     newTodo = do
-      S.execute conn "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
+      execute conn "INSERT INTO todos (user_id,text,done) VALUES (?,?,?)"
         (uid, todoText t, todoDone t)
-      rowId <- S.lastInsertRowId conn
+      rowId <- lastInsertRowId conn
       return $ t { todoId = Just rowId }
 
     updateTodo tid = do
-      S.execute conn "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
+      execute conn "UPDATE todos SET text = ?, done = ? WHERE (user_id = ? AND id = ?)"
         (todoText t, todoDone t, uid, tid)
       return t
