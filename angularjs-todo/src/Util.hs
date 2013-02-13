@@ -13,10 +13,9 @@ import qualified Data.Text.Read as T
 
 import           Snap.Core
 import           Snap.Snaplet
-import           Snap.Snaplet.Auth
 import           Application
 
-type H = Handler App (AuthManager App)
+type H = Handler App App
 
 reader :: T.Reader a -> T.Text -> Either String a
 reader p s =

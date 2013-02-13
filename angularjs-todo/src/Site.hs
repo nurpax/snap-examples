@@ -36,10 +36,10 @@ import           Application
 import qualified Db
 import           Util
 
-type H = Handler App (AuthManager App)
+type H = Handler App App
 
 -- | Render login form
-handleLogin :: Maybe T.Text -> H ()
+handleLogin :: Maybe T.Text -> Handler App (AuthManager App) ()
 handleLogin authError =
   heistLocal (I.bindSplices errs) $ render "login"
   where
@@ -51,13 +51,13 @@ handleLogin authError =
 -- login exists in the user database.
 handleLoginSubmit :: H ()
 handleLoginSubmit =
-  loginUser "login" "password" Nothing
-    (const . handleLogin . Just $ "Unknown login or incorrect password")
+  with auth $ loginUser "login" "password" Nothing
+    (\_ -> handleLogin . Just $ "Unknown login or incorrect password")
     (redirect "/")
 
 -- | Logs out and redirects the user to the site index.
 handleLogout :: H ()
-handleLogout = logout >> redirect "/"
+handleLogout = with auth logout >> redirect "/"
 
 -- | Handle new user form submit
 handleNewUser :: H ()
@@ -65,7 +65,7 @@ handleNewUser =
   method GET (renderNewUserForm Nothing) <|> method POST handleFormSubmit
   where
     handleFormSubmit = do
-      authUser <- registerUser "login" "password"
+      authUser <- with auth $ registerUser "login" "password"
       either (renderNewUserForm . Just) login authUser
 
     renderNewUserForm (err :: Maybe AuthFailure) =
@@ -73,15 +73,17 @@ handleNewUser =
       where
         errs = [("newUserError", I.textSplice . T.pack . show $ c) | c <- maybeToList err]
 
-    login user = logRunEitherT $ do
-      lift $ forceLogin user >> (return $ redirect "/")
+    login user =
+      logRunEitherT $
+        lift (with auth (forceLogin user) >> redirect "/")
 
 -- | Run actions with a logged in user or go back to the login screen
 withLoggedInUser :: (Db.User -> H ()) -> H ()
 withLoggedInUser action =
-  currentUser >>= go
+  with auth currentUser >>= go
   where
-    go Nothing  = handleLogin (Just "Must be logged in to view the main page")
+    go Nothing  =
+      with auth $ handleLogin (Just "Must be logged in to view the main page")
     go (Just u) = logRunEitherT $ do
       uid  <- tryJust "withLoggedInUser: missing uid" (userId u)
       uid' <- hoistEither (reader T.decimal (unUid uid))
@@ -115,11 +117,11 @@ mainPage = withLoggedInUser (const $ serveDirectory "static")
 
 -- | The application's routes.
 routes :: [(ByteString, Handler App App ())]
-routes = [ ("/login",        with auth handleLoginSubmit)
-         , ("/logout",       with auth handleLogout)
-         , ("/new_user",     with auth handleNewUser)
-         , ("/api/todo",     with auth handleTodos)
-         , ("/",             with auth mainPage)
+routes = [ ("/login",        handleLoginSubmit)
+         , ("/logout",       handleLogout)
+         , ("/new_user",     handleNewUser)
+         , ("/api/todo",     handleTodos)
+         , ("/",             mainPage)
          , ("/static",       serveDirectory "static")
          ]
 
