@@ -16,7 +16,6 @@ import           Control.Monad.Trans.Either
 import           Control.Error.Safe (tryJust)
 import           Control.Lens ((^#))
 import           Data.ByteString (ByteString)
-import           Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
 import           Database.SQLite.Simple as S
@@ -29,7 +28,7 @@ import           Snap.Snaplet.Session.Backends.CookieSession
 import           Snap.Snaplet.SqliteSimple
 import           Snap.Util.FileServe
 import           Snap.Extras.JSON
-import           Heist()
+import           Heist
 import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
 import           Application
@@ -43,7 +42,8 @@ handleLogin :: Maybe T.Text -> Handler App (AuthManager App) ()
 handleLogin authError =
   heistLocal (I.bindSplices errs) $ render "login"
   where
-    errs = [("loginError", I.textSplice c) | c <- maybeToList authError]
+    errs = maybe noSplices splice authError
+    splice err = "loginError" ## I.textSplice err
 
 -- | Handle login submit.  Either redirect to '/' on success or give
 -- an error.  We deliberately do NOT show the AuthFailure on the login
@@ -71,7 +71,8 @@ handleNewUser =
     renderNewUserForm (err :: Maybe AuthFailure) =
       heistLocal (I.bindSplices errs) $ render "new_user"
       where
-        errs = [("newUserError", I.textSplice . T.pack . show $ c) | c <- maybeToList err]
+        errs = maybe noSplices splice err
+        splice e = "newUserError" ## I.textSplice . T.pack . show $ e
 
     login user =
       logRunEitherT $
@@ -145,6 +146,6 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     let conn = sqliteConn $ d ^# snapletValue
     liftIO $ withMVar conn $ Db.createTables
 
-    addAuthSplices auth
+    addAuthSplices h auth
     return $ App h s d a
 

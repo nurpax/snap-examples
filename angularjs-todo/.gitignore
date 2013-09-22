@@ -5,3 +5,5 @@ test.db
 log/*.log
 snaplets/sqlite-auth/
 snaplets/sqlite-simple/
+.cabal-sandbox/
+cabal.sandbox.config
