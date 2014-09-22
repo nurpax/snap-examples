@@ -23,7 +23,7 @@ Executable angularjs-todo
     aeson   (>= 0.6 && < 0.7) || (>= 0.7.0.4 && < 0.8),
     bytestring >= 0.9.1 && < 0.11,
     heist == 0.13.*,
-    lens >= 3.7.6 && < 4.2,
+    lens,
     MonadCatchIO-transformers >= 0.2.1 && < 0.4,
     mtl >= 2 && < 3,
     snap >= 0.13,
