@@ -27,7 +27,6 @@ import           Snap.Snaplet.Heist
 import           Snap.Snaplet.Session.Backends.CookieSession
 import           Snap.Snaplet.SqliteSimple
 import           Snap.Util.FileServe
-import           Snap.Extras.JSON
 import           Heist
 import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
