@@ -20,9 +20,9 @@ Executable angularjs-todo
 
   Build-depends:
     base >= 4 && < 5,
-    aeson   (>= 0.6 && < 0.7) || (>= 0.7.0.4 && < 0.8),
+    aeson   (>= 0.6 && < 0.7) || (>= 0.7.0.4 && < 0.9),
     bytestring >= 0.9.1 && < 0.11,
-    heist == 0.13.*,
+    heist >= 0.13,
     lens,
     MonadCatchIO-transformers >= 0.2.1 && < 0.4,
     mtl >= 2 && < 3,
